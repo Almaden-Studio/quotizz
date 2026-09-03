@@ -1,63 +1,230 @@
-export const config = { runtime: 'edge' };
-
-const COOKIE_NAME = 'quotizz_auth';
-const SESSION_HOURS = 24 * 7; // 7 days
-
-function bytesToB64url(bytes) {
-  let bin = '';
-  bytes.forEach((b) => (bin += String.fromCharCode(b)));
-  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
-async function sign(payloadB64, secret) {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign']
-  );
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payloadB64));
-  return bytesToB64url(new Uint8Array(sig));
-}
-
-export default async function handler(request) {
-  if (request.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quotizz | Iniciar sesión</title>
+<link rel="icon" href="favicon.ico">
+<style>
+  :root {
+    --navy: #14213D;
+    --navy-line: #1f3157;
+    --amber: #F5A623;
+    --white: #ffffff;
+    --gray-text: #6b7280;
+    --gray-muted: #8a93a3;
+    --gray-fill: #f0f1f3;
+    --border: #dde1e8;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  body {
+    display: flex;
+    min-height: 100vh;
   }
 
-  const { password } = await request.json().catch(() => ({}));
-  const correctPassword = process.env.SITE_PASSWORD;
-  const secret = process.env.COOKIE_SECRET;
-
-  if (!correctPassword || !secret) {
-    return new Response(
-      JSON.stringify({ ok: false, error: 'Server not configured' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    );
+  .split {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
   }
 
-  if (!password || password !== correctPassword) {
-    return new Response(
-      JSON.stringify({ ok: false, error: 'Incorrect password' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    );
+  .panel-art {
+    flex: 1;
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 100vh;
+  }
+  .doc {
+    position: absolute;
+    width: 220px;
+    height: 280px;
+    background: var(--white);
+    border-radius: 10px;
+    border: 1px solid var(--navy-line);
+  }
+  .doc-back-1 { transform: rotate(-10deg); opacity: 0.5; }
+  .doc-back-2 { transform: rotate(6deg); opacity: 0.75; }
+  .doc-front {
+    transform: rotate(-2deg);
+    overflow: hidden;
+  }
+  .doc-front .tab {
+    background: var(--amber);
+    height: 10px;
+    border-radius: 10px 10px 0 0;
+  }
+  .doc-front .body { padding: 20px; }
+  .doc-front .label {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--navy);
+    margin-bottom: 18px;
+  }
+  .doc-front .bar {
+    height: 8px;
+    background: var(--gray-fill);
+    border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .doc-front .bar.w1 { width: 90%; }
+  .doc-front .bar.w2 { width: 80%; }
+  .doc-front .bar.w3 { width: 85%; margin-bottom: 20px; }
+  .doc-front .bar.w4 { width: 70%; margin-bottom: 24px; }
+  .doc-front .total {
+    height: 11px;
+    width: 40%;
+    background: var(--navy);
+    border-radius: 4px;
   }
 
-  const exp = Date.now() + SESSION_HOURS * 60 * 60 * 1000;
-  const payloadB64 = bytesToB64url(new TextEncoder().encode(JSON.stringify({ exp })));
-  const sig = await sign(payloadB64, secret);
-  const token = `${payloadB64}.${sig}`;
+  .panel-form {
+    flex: 1;
+    background: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    min-height: 100vh;
+  }
+  .form-inner {
+    width: 100%;
+    max-width: 340px;
+  }
+  .logo {
+    height: 40px;
+    width: auto;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .tagline {
+    color: var(--gray-muted);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+    line-height: 1.4;
+    margin: 0 0 40px;
+  }
+  form { display: flex; flex-direction: column; gap: 14px; }
+  label {
+    color: var(--gray-text);
+    font-size: 12px;
+    display: block;
+    margin-bottom: 5px;
+  }
+  input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--navy);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="password"]:focus { border-color: var(--amber); }
+  button {
+    padding: 12px 14px;
+    border-radius: 6px;
+    border: none;
+    background: var(--amber);
+    color: var(--navy);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: filter 0.15s;
+  }
+  button:hover { filter: brightness(1.06); }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .error {
+    color: #b3261e;
+    font-size: 13px;
+    min-height: 18px;
+  }
 
-  const cookie = `${COOKIE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${
-    SESSION_HOURS * 3600
-  }`;
+  @media (max-width: 760px) {
+    .panel-art { display: none; }
+    .panel-form { min-height: 100vh; }
+  }
+</style>
+</head>
+<body>
+  <div class="split">
+    <div class="panel-art">
+      <div class="doc doc-back-1"></div>
+      <div class="doc doc-back-2"></div>
+      <div class="doc doc-front">
+        <div class="tab"></div>
+        <div class="body">
+          <div class="label">Cotizaciones</div>
+          <div class="bar w1"></div>
+          <div class="bar w2"></div>
+          <div class="bar w3"></div>
+          <div class="bar w4"></div>
+          <div class="total"></div>
+        </div>
+      </div>
+    </div>
 
-  return new Response(JSON.stringify({ ok: true }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Set-Cookie': cookie,
-    },
-  });
-}
+    <div class="panel-form">
+      <div class="form-inner">
+        <img src="quotizz-logo-horizontal.png" alt="Quotizz" class="logo">
+        <p class="tagline">Cotizaciones profesionales para tu negocio</p>
+
+        <form id="loginForm">
+          <div>
+            <label for="password">Contraseña</label>
+            <input type="password" id="password" placeholder="••••••••" autofocus required>
+          </div>
+          <button type="submit" id="submitBtn">Ingresar</button>
+          <div class="error" id="errorMsg"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const btn = document.getElementById('submitBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const params = new URLSearchParams(window.location.search);
+    const redirectTo = params.get('redirect') || '/';
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.textContent = '';
+      btn.disabled = true;
+      btn.textContent = 'Verificando...';
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: document.getElementById('password').value }),
+        });
+        const data = await res.json();
+
+        if (data.ok) {
+          window.location.href = redirectTo;
+        } else {
+          errorMsg.textContent = data.error || 'Contraseña incorrecta';
+          btn.disabled = false;
+          btn.textContent = 'Ingresar';
+        }
+      } catch (err) {
+        errorMsg.textContent = 'Error de conexión. Intenta de nuevo.';
+        btn.disabled = false;
+        btn.textContent = 'Ingresar';
+      }
+    });
+  </script>
+</body>
+</html>
