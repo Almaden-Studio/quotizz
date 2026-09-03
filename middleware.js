@@ -4,6 +4,12 @@ export const config = {
 
 const COOKIE_NAME = 'quotizz_auth';
 
+function getCookie(request, name) {
+  const cookieHeader = request.headers.get('cookie') || '';
+  const match = cookieHeader.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function b64urlToBytes(b64url) {
   const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
   const bin = atob(b64);
@@ -40,7 +46,7 @@ async function verify(token, secret) {
 }
 
 export default async function middleware(request) {
-  const cookie = request.cookies.get(COOKIE_NAME)?.value;
+  const cookie = getCookie(request, COOKIE_NAME);
   const ok = await verify(cookie, process.env.COOKIE_SECRET);
 
   if (!ok) {
